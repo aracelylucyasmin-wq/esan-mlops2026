@@ -1,0 +1,40 @@
+name: Auto Create PR
+
+on:
+  push:
+    branches:
+      - dev
+
+# Es necesario otorgar permisos explícitos para crear Pull Requests
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Crear Pull Request
+        env:
+          # GITHUB_TOKEN se genera automáticamente, no necesitas configurarlo como secret manual
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. Verifica si ya existe un PR abierto desde dev hacia main para evitar errores
+          PR_EXISTS=$(gh pr list --head dev --base main --state open --json url --jq 'length')
+          
+          if [ "$PR_EXISTS" -eq "0" ]; then
+            # 2. Crea el PR si no existe
+            gh pr create \
+              --base main \
+              --head dev \
+              --title "Automated PR: Cambios desde dev a main" \
+              --body "Este Pull Request fue generado automáticamente tras un push en la rama \`dev\`."
+            
+            echo "Pull Request creado exitosamente."
+          else
+            # 3. Si ya existe, los commits del push actual ya se reflejan en ese PR automáticamente
+            echo "Ya existe un Pull Request abierto. Los nuevos commits se han añadido a ese PR."
+          fi
